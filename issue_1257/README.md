@@ -5,6 +5,18 @@
 - **Repo:** TileLang
 - **Status:** Fixed in v0.1.8
 
+## Environment Used
+
+- **GPU:** NVIDIA GeForce MX450 (Laptop GPU, 2GB VRAM)
+- **CUDA Toolkit Version:** 12.3
+- **OS:** Ubuntu (WSL on Windows)
+- **Python Version:** 3.10
+- **PyTorch Version:** 2.4.0
+
+> Note: This bug is related to code generation and should reproduce on any CUDA-capable NVIDIA GPU.
+
+
+
 ## What is the Bug?
 
 TileLang version 0.1.6 generated CUDA kernels that were missing a
@@ -47,12 +59,23 @@ a[((int)threadIdx.x)] = shared[...];
 
 ## How to Reproduce
 
-### Install the buggy version
+### Step 1 — Clone the repository
+```bash
+git clone https://github.com/JinalDevadiga/tilelang-bug-reproductions.git
+cd tilelang-bug-reproductions
+```
+
+### Step 2 — Navigate to this issue folder
+```bash
+cd issue_1257
+```
+
+### Step 3 — Install the buggy version
 ```bash
 pip install tilelang==0.1.6
 ```
 
-### Run the script
+### Step 4 — Run the script
 ```bash
 python reproduce.py
 ```
@@ -61,6 +84,14 @@ python reproduce.py
 Look at the "Generated CUDA kernel source" section in the output.
 In version 0.1.6, there is NO `__syncthreads()` after the `AtomicAdd` line.
 This confirms the data race bug in the generated code.
+
+### Verify the Fix
+```bash
+pip install tilelang==0.1.8
+python reproduce.py
+```
+
+You should now see `__syncthreads()` after `AtomicAdd`.
 
 ## Expected Output (Buggy — v0.1.6)
 The generated CUDA kernel will show:
