@@ -1,6 +1,6 @@
 import tilelang
 import tilelang.language as T
-from tilelang.intrinsics import make_mma_swizzle_layout as make_swizzle_layout
+# from tilelang.intrinsics import make_mma_swizzle_layout as make_swizzle_layout
 
 
 def matmul_correct(M, N, K, block_M, block_N, block_K, dtype="float16", accum_dtype="float"):
