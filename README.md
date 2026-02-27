@@ -8,9 +8,9 @@ including data races, synchronization issues, and compile-time errors.
 | Issue | Title | Bug Type | Reproduced On | Status |
 |-------|-------|----------|---------------|--------|
 | [#1257](issue_1257/) | Missing `__syncthreads()` after `AtomicAdd` | Data race in generated CUDA kernel | v0.1.6 | Fixed in v0.1.8 |
-| [#96](issue_96_pipeline_race/) | Race condition in tutorial matmul | Async pipeline race with `num_stages > 0` | v0.1.5 | Closed |
-| [#666](issue_666_clear_before_pipeline/) | Wrong results clearing shared memory before pipelined loop on H100 | Sync bug between `T.clear` and async pipeline stages | v0.1.5 | Closed |
-| [#1671](issue_1671_and_or_in_expr/) | Python `and`/`or`/`not` on TVM Expr raises `ValueError` | Compile-time error from incorrect use of Python boolean operators on symbolic expressions | v0.1.7.post2 | Open (not reproduced on v0.1.8) |
+| [#96](issue_96) | Race condition in tutorial matmul | Async pipeline race with `num_stages > 0` | v0.1.5 | Closed |
+| [#666](issue_666) | Wrong results clearing shared memory before pipelined loop on H100 | Sync bug between `T.clear` and async pipeline stages | v0.1.5 | Closed |
+| [#1671](issue_1671) | Python `and`/`or`/`not` on TVM Expr raises `ValueError` | Compile-time error from incorrect use of Python boolean operators on symbolic expressions | v0.1.7.post2 | Open (not reproduced on v0.1.8) |
 
 ## Setup
 ```bash
