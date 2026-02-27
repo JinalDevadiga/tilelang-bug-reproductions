@@ -40,10 +40,3 @@ func = tilelang.compile(matmul(N, N, N, 128, 128, 32), out_idx=[2], target="cuda
 
 print("--- Generated CUDA kernel source (BUGGY - num_stages=3) ---")
 print(func.get_kernel_source())
-print()
-print("--- What to look for ---")
-print("The pipeline with num_stages=3 generates async prefetch code.")
-print("The race condition occurs because async copies of A_shared and")
-print("B_shared across pipeline stages are not properly synchronized,")
-print("causing threads to read stale data from previous pipeline stages.")
-print("Setting num_stages=0 disables the pipeline and fixes the race.")
