@@ -4,7 +4,7 @@
 - **GitHub Issue:** https://github.com/tile-ai/tilelang/issues/1671
 - **Repo:** TileLang
 - **Reported on:** v0.1.7.post2
-- **Status:** Open (not reproduced on v0.1.8 — likely silently fixed)
+- **Status:** Open
 
 ---
 
@@ -29,17 +29,16 @@ the kernel is compiled and run on the GPU.
 
 TileLang is built on **TVM** as its compiler backend. TVM ships
 **inside** the TileLang package — it is not a separate dependency.
-When you install `tilelang`, TVM comes with it. The `Expr` type, the
-`ValueError`, and the `tir.all`/`tir.any` fix all come from TVM's
-internals, which TileLang exposes as `T.tir`.
+When you install `tilelang`, TVM comes with it. The `Expr` type and
+the `ValueError` are part of TVM's internals that TileLang is built on.
 
 ---
 
 ## Root Cause
 
-Inside a `@T.prim_func` kernel, variables like loop indices and symbolic
-dimensions are **TVM Expr objects**, not plain Python integers. Their
-values are only resolved at kernel compile/run time on the GPU.
+Inside a `@T.prim_func` kernel, variables like loop indices are
+**TVM Expr objects**, not plain Python integers. Their values are only
+resolved at kernel compile/run time on the GPU.
 
 Python's `and`/`or`/`not` keywords work by calling `__bool__()` on their
 operands to evaluate them as True/False immediately. TVM's `Expr.__bool__`
@@ -48,69 +47,60 @@ is intentionally blocked and raises `ValueError`.
 This only happens with **symbolic expressions** — for example:
 ```python
 row = bx * BLOCK + tx        # TVM Expr (symbolic)
-seq_len = 128                 # plain Python int
 
-if row < seq_len and j < 64:  # ← crashes: 'row < seq_len' is an Expr
+if row < 128 and j < 64:     # ← crashes: 'row < 128' is a TVM Expr
+    B[row, j] = A[row, j] * 2.0
 ```
-
-Static integer conditions (e.g. `if 3 < 10 and 2 < 5`) are fine because
-Python evaluates those immediately without producing a TVM Expr.
-
----
-
-## The Fix
-
-Replace Python boolean operators with their TVM-native equivalents:
-
-| Buggy | Fixed |
-|-------|-------|
-| `cond_a and cond_b` | `T.tir.all(cond_a, cond_b)` |
-| `cond_a or cond_b` | `T.tir.any(cond_a, cond_b)` |
-| `not cond` | `T.tir.Not(cond)` |
-| `min(expr_a, expr_b)` | `T.tir.min(expr_a, expr_b)` |
-| `max(expr_a, expr_b)` | `T.tir.max(expr_a, expr_b)` |
 
 ---
 
 ## Requirements
 
 - Python 3.10+
-- CUDA 12.x
+- **CUDA 13.x** (required by tilelang==0.1.7.post2 — see note below)
 - Any NVIDIA GPU
-- `tilelang` (any version)
+- `tilelang==0.1.7.post2`
 - `torch`
-```bash
-pip install tilelang torch
-```
 
 ---
 
 ## How to Run
 ```bash
+pip install tilelang==0.1.7.post2
 python reproduce.py
 ```
 
 ---
 
-## Expected Output
+## Note on CUDA Version Requirement
 
-On **v0.1.7.post2** (the version where the bug was reported), the buggy
-kernel section would raise:
+The v0.1.7.post2 wheel was built against **CUDA 13**. If your system has
+CUDA 12, the import will fail with:
+```
+OSError: libcudart.so.13: cannot open shared object file: No such file or directory
+```
+
+This is an environment constraint, not part of the bug itself. The bug
+is in the Python code pattern — the `and` operator used on a TVM Expr
+inside a kernel. The reproduce.py script shows this pattern clearly and
+documents the exact error that v0.1.7.post2 raises.
+
+---
+
+## Expected Output on v0.1.7.post2
 ```
 ValueError: Cannot use and / or / not operator to Expr,
             hint: use tvm.tir.all / tvm.tir.any instead
 ```
 
-On **v0.1.8+** the buggy kernel compiles without error, and the script
-prints the generated CUDA source for both kernels. The fixed kernel
-compiles and runs correctly on both versions.
+## Expected Output on v0.1.8+
 
----
-
-## Note on Version Behaviour
-
-This bug could not be reproduced on v0.1.8. The issue remains open on
-GitHub with no linked fix or closing commit, so it is unclear exactly
-when or how it was resolved. The `reproduce.py` script handles both
-cases: it reports whether the error is raised or not, and always
-demonstrates the correct fix using `T.tir.all()`.
+The bug is not triggered on v0.1.8. The script compiles successfully
+and prints the generated CUDA source:
+```c
+extern "C" __global__ void __launch_bounds__(64, 1) kernel_kernel(...) {
+  for (int j = 0; j < 64; ++j) {
+    B[...] = (A[...] * 2.0);
+  }
+}
+```
